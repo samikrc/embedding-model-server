@@ -1,0 +1,22 @@
+*.class
+*.log
+*.iml
+.attach*
+
+.cache
+.history
+.lib/
+.idea/
+dist/*
+target/
+metastore_db/
+__pycache__
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
+*.copy
+
+# Project specific
+tfhub/
