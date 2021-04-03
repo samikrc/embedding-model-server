@@ -40,7 +40,7 @@ class USEEmbeddingServer(system: ActorSystem)
     private def loadUSE: SavedModelBundle =
     {
         val USEModelPath = ConfigManager.get("USE.path")
-        SavedModelBundle.load(USEModelPath)
+        SavedModelBundle.load(USEModelPath, "serve")
     }
 
     /**
@@ -61,8 +61,9 @@ class USEEmbeddingServer(system: ActorSystem)
     def getEmbedding(useEmbedRequest: USEEmbedRequest): Future[USEEmbeddingResponse] = Future
     {
         val sessionRunner = useModel.session().runner()
-        // TODO Return future success or fail based on lengths!
         val input = useEmbedRequest.data
+        // TODO Return future success or fail based on element count below.
+        // Embedding for each sentence is around 10kb of size.
         val transformedInput = if(useEmbedRequest.splitTextByFS) input.split("\\.") else Array(input)
         val inputTensors = Tensors.create(transformedInput.map(sentence => sentence.getBytes()))
         val results = sessionRunner.feed(firstInput, inputTensors).fetch(firstOutput).run().asScala(0)

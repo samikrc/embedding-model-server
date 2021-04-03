@@ -10,6 +10,8 @@ import akka.routing.RoundRobinPool
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import org.samik.EmbeddingModelServer.utils.{ConfigManager, Input, Json}
+import org.samik.EmbeddingModelServer._
+import org.samik.EmbeddingModelServer.USEEmbeddingServer._
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import akka.pattern.ask
 
@@ -24,11 +26,11 @@ object EmbeddingModelServer extends App
         println("Defaults:")
         println("  1st arg: local")
         println("  2nd arg: local-config.conf")
-        System.exit(0)
     }
 
     private val execType = if(args.length > 0) args(0) else "local"
     val configFile = if(args.length > 1) args(1) else s"$execType-config.conf"
+    println(s"Using execType: $execType, config file: $configFile ...")
 
     implicit val system = ActorSystem("embedding-model-server")
     implicit val materializer = ActorMaterializer()
@@ -49,7 +51,7 @@ object EmbeddingModelServer extends App
 
     // Define helper directive to convert input JSON to an EmbedRequest
     implicit val webInputFromStringPayloadUM: FromEntityUnmarshaller[EmbedRequest] =
-        PredefinedFromEntityUnmarshallers.stringUnmarshaller.map(v => new EmbedRequest(new Input(v)))
+        PredefinedFromEntityUnmarshallers.stringUnmarshaller.map(v => EmbedRequest(new Input(v, List("data"))))
 
     // Define an exception handler for the possible exceptions that arise.
     val serverExceptionHandler = ExceptionHandler
@@ -66,9 +68,10 @@ object EmbeddingModelServer extends App
     {
         embedRequest =>
         {
-            (path("USE") & pathEndOrSingleSlash)
+            (pathPrefix("USE") & pathEndOrSingleSlash)
             {
-                val responseF: Future[USEEmbeddingServer.USEEmbeddingResponse] = useEmbeddingServer.getEmbedding(embedRequest.asInstanceOf[USEEmbedRequest])
+                val useEmbedRequest = new USEEmbedRequest(embedRequest.input)
+                val responseF: Future[USEEmbeddingResponse] = useEmbeddingServer.getEmbedding(useEmbedRequest)
                 onSuccess(responseF)
                 {
                     response => complete(HttpEntity(ContentTypes.`text/plain(UTF-8)`, Json.Value(response.data).write))
